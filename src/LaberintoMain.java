@@ -7,6 +7,12 @@ import utils.MatrizesGrafo;
 import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
+import javax.swing.JFileChooser;
+import javax.swing.SwingUtilities;
+import javax.swing.JFrame;
+import java.io.File;
+import java.awt.HeadlessException;
+import java.awt.GraphicsEnvironment;
 
 /**
  * Clase principal del sistema de resolución de laberintos.
@@ -90,8 +96,74 @@ public class LaberintoMain {
     }
 
     private void cargarArchivo(Scanner scanner) {
-        System.out.print("Ingrese la ruta del archivo del laberinto: ");
-        String ruta = scanner.nextLine().trim();
+        // Abrir un selector de archivos gráfico para que el usuario elija el laberinto
+        final String[] rutaSeleccionada = new String[1];
+
+        Runnable abrirSelector = () -> {
+            try {
+                // Crear un frame temporal como padre para asegurar que el dialogo se muestre encima
+                JFrame frame = new JFrame();
+                frame.setAlwaysOnTop(true);
+                frame.setUndecorated(true);
+                frame.setSize(0, 0);
+                frame.setLocationRelativeTo(null);
+                frame.setVisible(true);
+
+                JFileChooser chooser = new JFileChooser();
+                chooser.setDialogTitle("Seleccione el archivo del laberinto");
+                System.out.println("[DEBUG] Mostrando JFileChooser...");
+                int resultado = chooser.showOpenDialog(frame);
+                if (resultado == JFileChooser.APPROVE_OPTION) {
+                    File file = chooser.getSelectedFile();
+                    rutaSeleccionada[0] = file.getAbsolutePath();
+                    System.out.println("[DEBUG] Ruta seleccionada por GUI: " + rutaSeleccionada[0]);
+                } else {
+                    rutaSeleccionada[0] = null;
+                    System.out.println("[DEBUG] Usuario canceló el selector GUI o no se seleccionó archivo.");
+                }
+
+                frame.dispose();
+            } catch (Exception ex) {
+                System.out.println("[DEBUG] Excepción en abrirSelector: " + ex.getMessage());
+                ex.printStackTrace();
+                rutaSeleccionada[0] = null;
+            }
+        };
+
+        // Intentar abrir selector gráfico si el entorno no es headless
+        System.out.println("[DEBUG] GraphicsEnvironment.isHeadless(): " + GraphicsEnvironment.isHeadless());
+        try {
+            if (!GraphicsEnvironment.isHeadless()) {
+                System.out.println("[DEBUG] Intentando abrir selector gráfico...");
+                if (SwingUtilities.isEventDispatchThread()) {
+                    abrirSelector.run();
+                } else {
+                    SwingUtilities.invokeAndWait(abrirSelector);
+                }
+            } else {
+                System.out.println("[DEBUG] Entorno headless detectado.");
+                rutaSeleccionada[0] = null;
+            }
+        } catch (HeadlessException he) {
+            System.out.println("Entorno sin soporte gráfico. Usando fallback por consola.");
+            he.printStackTrace();
+            rutaSeleccionada[0] = null;
+        } catch (Exception e) {
+            System.out.println("✗ Error al abrir el selector de archivos: " + e.getMessage());
+            e.printStackTrace();
+            rutaSeleccionada[0] = null;
+        }
+
+        String ruta = rutaSeleccionada[0];
+        // Si el usuario canceló o no se pudo abrir el selector, pedir ruta por consola
+        if (ruta == null) {
+            System.out.print("Ingrese la ruta del archivo del laberinto (fallback): ");
+            ruta = scanner.nextLine().trim();
+            if (ruta.isEmpty()) {
+                System.out.println("No se proporcionó ninguna ruta. Operación cancelada.");
+                return;
+            }
+        }
 
         try {
             parser = new LaberintoParser();
