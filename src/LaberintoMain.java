@@ -10,6 +10,10 @@ import java.util.Scanner;
 import javax.swing.JFileChooser;
 import javax.swing.SwingUtilities;
 import javax.swing.JFrame;
+import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.io.File;
 import java.awt.HeadlessException;
 import java.awt.GraphicsEnvironment;
@@ -246,7 +250,46 @@ public class LaberintoMain {
         System.out.println("MATRICES DEL GRAFO");
         System.out.println("=".repeat(50));
 
-        matrices.imprimirMatrizAdyacencia();
-        matrices.imprimirMatrizIncidencia();
+        // Intentar mostrar las matrices en una ventana gráfica; si no es posible, usar consola
+        if (!GraphicsEnvironment.isHeadless()) {
+            try {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                PrintStream ps = new PrintStream(baos);
+                PrintStream oldOut = System.out;
+                System.setOut(ps);
+                try {
+                    matrices.imprimirMatrizAdyacencia();
+                    matrices.imprimirMatrizIncidencia();
+                } finally {
+                    System.out.flush();
+                    System.setOut(oldOut);
+                    ps.close();
+                }
+
+                String contenido = baos.toString();
+                final String textoMostrar = contenido;
+
+                SwingUtilities.invokeLater(() -> {
+                    JFrame frame = new JFrame("Matrices del Grafo");
+                    JTextArea area = new JTextArea(textoMostrar);
+                    area.setEditable(false);
+                    JScrollPane scroll = new JScrollPane(area);
+                    frame.getContentPane().add(scroll);
+                    frame.setSize(800, 600);
+                    frame.setLocationRelativeTo(null);
+                    frame.setVisible(true);
+                });
+
+            } catch (Exception e) {
+                System.out.println("✗ Error mostrando matrices en GUI: " + e.getMessage());
+                e.printStackTrace();
+                // Fallback a consola
+                matrices.imprimirMatrizAdyacencia();
+                matrices.imprimirMatrizIncidencia();
+            }
+        } else {
+            matrices.imprimirMatrizAdyacencia();
+            matrices.imprimirMatrizIncidencia();
+        }
     }
 }
